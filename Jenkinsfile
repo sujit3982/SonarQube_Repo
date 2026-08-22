@@ -21,6 +21,27 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     sh "${scannerHome}/bin/sonar-scanner"
+         stage("Jar Publish") {
+        steps {
+                script {
+                        echo '<--------------- Jar Publish Started --------------->'
+                        def server = Artifactory.newServer url: registry + "/artifactory", credentialsId: "artifactory_cred"
+                        def properties = "buildId=${env.BUILD_ID},commit=${GIT_COMMIT}"
+                        def uploadSpec = """{
+                                "files": [
+                                        {
+                                                "pattern": "jarstaging/(*)",
+                                                "target": "sai-libs-release-local/{1}",
+                                                "flat": "false",
+                                                "props": "${properties}",
+                                                "exclusions": ["*.sha1", "*.md5"]
+                                        }
+                                ]
+                        }"""
+                        def buildInfo = server.upload(uploadSpec)
+                        buildInfo.env.collect()
+                        server.publishBuildInfo(buildInfo)
+                        echo '<--------------- Jar Publish Ended --------------->'
                 }
             }
         }
